@@ -1,0 +1,351 @@
+openapi: 3.0.0
+info:
+  title: API Festivos
+  version: 1.0.0
+  description: >
+    Verifica si una fecha es festiva, obtiene los festivos de un año y
+    permite administrar los festivos (agregar, consultar, modificar y eliminar).
+servers:
+  - url: /api
+    description: Servidor local
+
+tags:
+  - name: Consultas
+    description: Verificación y listado de festivos por año
+  - name: Festivos CRUD
+    description: Administración de los festivos guardados en MongoDB
+
+paths:
+  /festivos/verificar/{anio}/{mes}/{dia}:
+    get:
+      summary: Verifica si una fecha es festivo
+      tags: [Consultas]
+      parameters:
+        - in: path
+          name: anio
+          required: true
+          schema:
+            type: integer
+            example: 2023
+        - in: path
+          name: mes
+          required: true
+          schema:
+            type: integer
+            example: 6
+        - in: path
+          name: dia
+          required: true
+          schema:
+            type: integer
+            example: 12
+      responses:
+        "200":
+          description: Es Festivo, No es festivo o Fecha No válida
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: Es Festivo
+
+  /festivos/obtener/{anio}:
+    get:
+      summary: Obtiene la lista de festivos de un año
+      tags: [Consultas]
+      parameters:
+        - in: path
+          name: anio
+          required: true
+          schema:
+            type: integer
+            example: 2023
+      responses:
+        "200":
+          description: Lista de festivos del año ordenada por fecha
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    festivo:
+                      type: string
+                      example: Año nuevo
+                    fecha:
+                      type: string
+                      example: "2023-01-01"
+        "400":
+          description: Año inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorValidacion"
+
+  /tipos:
+    get:
+      summary: Lista los tipos de festivo con sus festivos
+      tags: [Consultas]
+      responses:
+        "200":
+          description: Tipos de festivo
+
+  /festivos/listar:
+    get:
+      summary: Lista todos los festivos guardados
+      tags: [Festivos CRUD]
+      responses:
+        "200":
+          description: Lista de festivos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Festivo"
+
+  /festivos/buscar/{id}:
+    get:
+      summary: Busca un festivo por su id
+      tags: [Festivos CRUD]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Festivo encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Festivo"
+        "400":
+          description: Id inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorValidacion"
+        "404":
+          description: No existe el festivo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+
+  /festivos/agregar:
+    post:
+      summary: Agrega un festivo nuevo
+      description: >
+        Tipos 1 y 2 usan dia y mes. Tipos 3 y 4 usan diasPascua.
+        El tipo 1 es fijo, el 2 se traslada al siguiente lunes, el 3 se calcula
+        desde el domingo de pascua y el 4 desde el domingo de pascua y se traslada al siguiente lunes.
+      tags: [Festivos CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FestivoEntrada"
+            examples:
+              virgenDeChiquinquira:
+                summary: Virgen de Chiquinquirá (con fecha en el calendario)
+                value:
+                  idTipo: 2
+                  nombre: Virgen de Chiquinquirá
+                  dia: 9
+                  mes: 7
+              basadoEnPascua:
+                summary: Festivo basado en pascua
+                value:
+                  idTipo: 4
+                  nombre: Festivo de prueba
+                  diasPascua: 49
+      responses:
+        "200":
+          description: Festivo agregado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Festivo"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorValidacion"
+        "404":
+          description: No existe el tipo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+        "409":
+          description: Ya existe un festivo con ese nombre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+
+  /festivos/modificar:
+    put:
+      summary: Modifica los datos de un festivo
+      tags: [Festivos CRUD]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FestivoModificacion"
+      responses:
+        "200":
+          description: Festivo modificado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Festivo"
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorValidacion"
+        "404":
+          description: No existe el tipo o el festivo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+        "409":
+          description: Ya existe otro festivo con ese nombre
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+
+  /festivos/eliminar/{id}:
+    delete:
+      summary: Elimina un festivo
+      tags: [Festivos CRUD]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Festivo eliminado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+        "400":
+          description: Id inválido
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorValidacion"
+        "404":
+          description: No existe el festivo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Mensaje"
+
+components:
+  schemas:
+    Festivo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 65f1c2a9e4b0a1b2c3d4e5f6
+        idTipo:
+          type: integer
+          example: 2
+        tipo:
+          type: string
+          example: Ley de Puente festivo
+        nombre:
+          type: string
+          example: Santos Reyes
+        dia:
+          type: integer
+          example: 6
+        mes:
+          type: integer
+          example: 1
+        diasPascua:
+          type: integer
+          example: 40
+
+    FestivoEntrada:
+      type: object
+      required: [idTipo, nombre]
+      properties:
+        idTipo:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 2
+        nombre:
+          type: string
+          example: Virgen de Chiquinquirá
+        dia:
+          type: integer
+          example: 9
+        mes:
+          type: integer
+          example: 7
+        diasPascua:
+          type: integer
+          example: 49
+
+    FestivoModificacion:
+      type: object
+      required: [id, idTipo, nombre]
+      properties:
+        id:
+          type: string
+          example: 65f1c2a9e4b0a1b2c3d4e5f6
+        idTipo:
+          type: integer
+          minimum: 1
+          maximum: 4
+          example: 2
+        nombre:
+          type: string
+          example: Virgen de Chiquinquirá
+        dia:
+          type: integer
+          example: 9
+        mes:
+          type: integer
+          example: 7
+        diasPascua:
+          type: integer
+          example: 49
+
+    Mensaje:
+      type: object
+      properties:
+        mensaje:
+          type: string
+
+    ErrorValidacion:
+      type: object
+      properties:
+        mensaje:
+          type: string
+          example: Error de validación
+        errores:
+          type: array
+          items:
+            type: object
+            properties:
+              campo:
+                type: string
+              mensaje:
+                type: string
