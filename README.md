@@ -7,6 +7,7 @@ escrita en clases, con documentación en Swagger.
 ## Instalación
 
 ```bash
+cd api-festivos/
 npm install
 npm run seed
 npm run dev
